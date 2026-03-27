@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ultimate Focus Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ---------------- Body & Colors ---------------- */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  transition: background 0.5s;
+}
+
+body.light {
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  color: #333;
+}
+
+/* ---------------- Container ---------------- */
+.container {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(15px);
+  padding: 30px;
+  border-radius: 25px;
+  text-align: center;
+  width: 340px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transition: background 0.5s;
+}
+
+body.light .container {
+  background: rgba(255,255,255,0.5);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* ---------------- Circle ---------------- */
+.circle {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 20px auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body.light .circle {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Wave Animation */
+.wave {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  left: -50%;
+  top: 50%;
+  background: rgba(0,255,204,0.2);
+  border-radius: 40%;
+  animation: waveMove 4s linear infinite;
+  z-index: 0;
+  transform: translateY(50%);
+}
+
+body.light .wave {
+  background: rgba(0,128,255,0.2);
+}
+
+@keyframes waveMove {
+  0% { transform: translateY(50%) rotate(0deg); }
+  100% { transform: translateY(50%) rotate(360deg); }
+}
+
+/* Timer text */
+.time {
+  position: absolute;
+  z-index: 2;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* ---------------- Buttons ---------------- */
+button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.start { background: #00ffcc; }
+.stop { background: #ff6b6b; color: white; }
+.distraction { background: #ffd93d; }
+.reset { background: #ccc; color: black; }
+.toggle { background: #fff; color: #333; }
+
+/* ---------------- Report ---------------- */
+.report {
+  margin-top: 20px;
+  background: rgba(255,255,255,0.15);
+  padding: 15px;
+  border-radius: 15px;
+  transition: background 0.5s;
+}
+
+body.light .report {
+  background: rgba(255,255,255,0.5);
+}
+
+/* ---------------- Responsive ---------------- */
+@media(max-width: 400px){
+  .container { width: 90%; padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🧠 Focus Mode</h2>
+
+  <div class="circle">
+    <div class="wave" id="wave"></div>
+    <div class="time" id="timer">00:00</div>
+  </div>
+
+  <button class="start" onclick="start()">Start</button>
+  <button class="stop" onclick="stop()">Stop</button>
+  <button class="distraction" onclick="addDistraction()">Got Distracted</button>
+  <button class="reset" onclick="resetAll()">Reset</button>
+  <button class="toggle" onclick="toggleTheme()">🌙 Toggle Light/Dark</button>
+
+  <p>Distractions: <span id="count">0</span></p>
+
+  <div class="report">
+    <h3>📊 Daily Report</h3>
+    <p>Focus Time: <span id="focusTime">0</span> min</p>
+    <p>Distractions: <span id="reportDistraction">0</span></p>
+    <p>Focus Score: <span id="score">0</span>%</p>
+  </div>
+</div>
+
+<script>
+// ---------------- State ----------------
+let seconds = localStorage.getItem("seconds") ? parseInt(localStorage.getItem("seconds")) : 0;
+let distractions = localStorage.getItem("distractions") ? parseInt(localStorage.getItem("distractions")) : 0;
+let interval = null;
+
+const total = 1500; // 25 min session
+
+// ---------------- UI Updates ----------------
+updateTimer();
+updateDistraction();
+updateReport();
+updateWave();
+
+function start() {
+  if (interval) return;
+
+  interval = setInterval(() => {
+    seconds++;
+    localStorage.setItem("seconds", seconds);
+
+    updateTimer();
+    updateWave();
+    updateReport();
+
+    // Alert + sound at session end
+    if (seconds >= total) {
+      stop();
+      playSound();
+      alert("🎉 Focus Session Complete!");
+    }
+  }, 1000);
+}
+
+function stop() {
+  clearInterval(interval);
+  interval = null;
+}
+
+function updateTimer() {
+  let m = Math.floor(seconds / 60);
+  let s = seconds % 60;
+  document.getElementById("timer").innerText =
+    String(m).padStart(2,'0') + ":" + String(s).padStart(2,'0');
+}
+
+function addDistraction() {
+  distractions++;
+  localStorage.setItem("distractions", distractions);
+  updateDistraction();
+  updateReport();
+}
+
+function updateDistraction() {
+  document.getElementById("count").innerText = distractions;
+}
+
+function updateReport() {
+  let minutes = Math.floor(seconds / 60);
+  document.getElementById("focusTime").innerText = minutes;
+  document.getElementById("reportDistraction").innerText = distractions;
+  let score = Math.max(0, 100 - distractions * 5);
+  document.getElementById("score").innerText = score;
+}
+
+// ---------------- Wave Animation ----------------
+function updateWave() {
+  const wave = document.getElementById("wave");
+  const percent = seconds / total;
+  wave.style.transform = `translateY(${50 - percent*50}%) rotate(${seconds*6}deg)`;
+}
+
+// ---------------- Reset ----------------
+function resetAll() {
+  seconds = 0;
+  distractions = 0;
+  localStorage.clear();
+
+  updateTimer();
+  updateWave();
+  updateDistraction();
+  updateReport();
+}
+
+// ---------------- Sound ----------------
+function playSound() {
+  let audio = new Audio("https://www.soundjay.com/buttons/beep-07.wav");
+  audio.play();
+}
+
+// ---------------- Theme Toggle ----------------
+function toggleTheme() {
+  document.body.classList.toggle("light");
+}
+</script>
+
+</body>
+</html>
